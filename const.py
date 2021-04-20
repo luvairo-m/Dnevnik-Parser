@@ -8,6 +8,6 @@ HEADERS = {
 
 # логин и пароль от дневника 
 PWD_DATA = {
-    "login": "oliks777@mail.ru",
-    "password": "FAMAS252525"
+    "lLOGIN",
+    "PASSWORD"
 }
