@@ -40,32 +40,49 @@ def send_marks(user_id, full, sub=None):
     else:
         try:
             dict = parser.get_marks()
+
+            try:
+                message = f"{sub.capitalize()}: {dict[sub][0]} {'=> ' + dict[sub][1] if dict[sub][1] != '' else ''}"
+                send_simple_message(user_id, message)
+            except KeyError as Error:
+                send_simple_message(user_id, "Такого предмета не существует. Введи ПОМОЩЬ ОЦЕНКИ, чтобы получить справку по команде")
+
         except Exception as Error:
             send_simple_message(user_id, "Произошла ошибка на стороне сервера")
-        try:
-            message = f"{sub.capitalize()}: {dict[sub][0]} {'=> ' + dict[sub][1] if dict[sub][1] != '' else ''}"
-            send_simple_message(user_id, message)
-        except KeyError as Error:
-            send_simple_message(user_id, "Такого предмета не существует")
 
 last_time = time()
 for event in VkLongPoll(session).listen():
     if event.type == VkEventType.MESSAGE_NEW and event.to_me:
         user_id = event.user_id
+
         if event.text.lower() == "все оценки":
-            if time() > last_time + 5:
+            if time() > last_time + 3:
                 last_time = time()
                 send_marks(user_id, True)
             else:
-                send_simple_message(user_id, f"Команда перезаряжается {round(last_time + 5 - time(), 2)} секунд. Подождите")
+                send_simple_message(user_id, f"Команда перезаряжается {round(last_time + 3 - time(), 2)} секунд. Подождите")
+
+        elif event.text.lower().split()[0] == "помощь" and event.text.lower().split()[1] == "оценки":
+            send_simple_message(
+                user_id,
+                "Синтаксис команды: оценки [предмет] (регистр не имеет значения, скобки писать не нужно) \
+                    \nЕсли название предмета состоит из двух слов, то их нужно заключить в кавычки \
+                    \nПример: оценки \"математические задачи\""
+            )
+
         elif event.text.lower() == "команды":
             send_commands(user_id)
+
         elif event.text.lower().split()[0] == "оценки":
-            if time() > last_time + 5:
+            if time() > last_time + 3:
                 last_time = time()
-                send_marks(user_id, False, event.text.lower().split()[1])
+                if event.text.lower().split("&quot;")[0] == event.text.lower():
+                    send_marks(user_id, False, event.text.lower().split(" ")[1])
+                else:
+                    send_marks(user_id, False, event.text.lower().split("&quot;")[1])
             else:
-                send_simple_message(user_id, f"Команда перезаряжается {round(last_time + 5 - time(), 2)} секунд. Подождите")
+                send_simple_message(user_id, f"Команда перезаряжается {round(last_time + 3 - time(), 2)} секунд. Подождите")
+
         elif event.text.lower() == "начать":
             user_data = session.method("users.get", {"user_id": user_id})
             keyboard = VkKeyboard(one_time=False)
@@ -73,8 +90,8 @@ for event in VkLongPoll(session).listen():
             keyboard.add_line()
             keyboard.add_button("Средний балл", color=VkKeyboardColor.POSITIVE)
             keyboard.add_line()
-            #keyboard.add_openlink_button("Средний балл (приложение)", link="https://play.google.com/store/apps/details?id=ru.luvairo.markplus")
-            #keyboard.add_line()
+            keyboard.add_openlink_button("Средний балл (приложение)", link="https://play.google.com/store/apps/details?id=ru.luvairo.markplus")
+            keyboard.add_line()
             keyboard.add_button("Команды", color=VkKeyboardColor.PRIMARY)
             session.method(
                 "messages.send", {
@@ -84,5 +101,9 @@ for event in VkLongPoll(session).listen():
                     "random_id": 0
                 }
             )
+
         else:
-            send_simple_message(user_id, "Такой команды не существует. Введите Начать или Команды, чтобы получить список доступных команд")
+            send_simple_message(
+                user_id, 
+                "Такой команды не существует. Введите НАЧАТЬ или КОМАНДЫ, чтобы получить список доступных команд"
+            )

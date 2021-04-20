@@ -6,11 +6,19 @@ except ImportError as Error:
     print("Произошла ошибка при импортировании модуля. Возможно, один из них отсутствует")
 
 
-class Parser:
+class Parser:            
 
     def __init__(self, log_url, data_url):
         self.__log_url = log_url
         self.__data_url = data_url
+        try:
+            self.__session = requests.Session()
+            self.__session.post(
+                self.__log_url, data=PWD_DATA,
+                headers=HEADERS, allow_redirects=False
+            )
+        except Exception as Error:
+            pass
 
     def __str__(self):
         return f"Страница авторизации: {self.__log_url}, \nСтраница оценок: {self.__data_url}"
@@ -32,13 +40,7 @@ class Parser:
         в метод parse_marks() для дальнейшего парсинга
         """
         try:
-            session = requests.Session()
-            session.post(
-                self.__log_url, data=PWD_DATA,
-                headers=HEADERS, allow_redirects=False
-            )
-
-            response = session.get(
+            response = self.__session.get(
                 self.__data_url, headers=HEADERS
             )
         except requests.exceptions.ConnectionError:
@@ -48,6 +50,25 @@ class Parser:
             return self.parse_marks(response)
         else:
             print("Произошла ошибка во время получения страницы")
+
+    def prettify_data(self, string):
+        """
+        Метод, заменяющий составные названия школьных предметов на более простые
+        string [str] ---> строка, которую мы проверяем (предмет)
+        """
+        words = {
+            "англ. язык": "английский",
+            "индивид. проект": "проект",
+            "инф. и икт": "информатика",
+            "рус. язык": "русский",
+            "сл. задачи по физике": "физические задачи",
+            "решение нестандартны": "математические задачи",
+            "практ. по русс.яз.": "русский практика"
+        }
+        if string in words:
+            return words[string]
+        else:
+            return string
 
     def parse_marks(self, web_page):
         """
@@ -63,7 +84,7 @@ class Parser:
             for mark in marks:
                 marks_dict.update(
                     {
-                        mark.find("td", class_="s2").get_text().lower(): 
+                        self.prettify_data(mark.find("td", class_="s2").get_text().lower()): 
                         [
                             self.checkNull(mark.find("td", attrs={"style": "text-align:left;"}).get_text(), "Нет оценок"), 
                             mark.find("td", attrs={"style": "text-align:left;"}).find_next("td", class_="tac").get_text()
